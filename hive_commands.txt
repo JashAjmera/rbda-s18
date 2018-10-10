@@ -1,0 +1,59 @@
+# This script contains all hive commands used:
+
+create database jda448_project;
+use jda448_project;
+show tables;
+
+
+create external table btc (Date string, TransCount int, Price int) row format delimited fields terminated by '\t' location '/user/jda448/ProjectHive/btc'tblproperties ("skip.header.line.count"="1");
+
+select * from btc limit 5;
+
+describe btc;
+
+create external table eth (Date string, TransCount int, Price int) row format delimited fields terminated by '\t' location '/user/jda448/ProjectHive/eth'tblproperties ("skip.header.line.count"="1");
+
+select * from eth limit 5;
+
+
+create external table ltc (Date string, TransCount int, Price int) row format delimited fields terminated by '\t' location '/user/jda448/ProjectHive/ltc'tblproperties ("skip.header.line.count"="1");
+
+
+select * from ltc limit 5;
+
+
+create external table news (Date string, Score float) row format delimited fields terminated by '\t' location '/user/jda448/ProjectHive/news'tblproperties ("skip.header.line.count"="1");
+
+select * from news limit 5;
+
+describe news;
+
+# To find average sentiment score of all articles during given time period
+select avg(score) as AVG_SCORE from news; 
+
+# To find date when BTC price was highest
+SELECT * FROM btc a WHERE a.price IN (SELECT max(b.price) FROM btc b);
+
+# To find count of days when overall sentiment was negative (<=0) or positive (>0)
+select count(*) as NEG_DAYS from news where score <= 0;
+select count(*) as POS_DAYS from news where score <= 0;
+
+# To change data type of DATE column
+ALTER TABLE eth CHANGE date date date;	
+
+# To select monthly average price and transactions
+select year(date) as YEAR, month(date) as MONTH, avg(transcount) as AVG_BTC_TRANS, avg(price) as AVG_BTC_PRICE from btc group by year(date),month(date);
+
+# To create transactions table
+create table news_all_trans as  SELECT t1.date as Date,t1.score as Score,t2.transcount as BTC_TRANS,t3.transcount as ETH_TRANS,t4.transcount as LTC_TRANS FROM news t1, btc t2, eth t3, ltc t4 WHERE t1.date = t2.date AND t2.date = t3.date AND t3.date = t4.date;
+
+# Joining all data sources on date (data sources: news,btc,ltc,eth)
+SELECT t1.date as Date,t1.score as Score,t2.price as BTC_PRICE,t3.price as ETH_PRICE,t4.price as LTC_PRICE FROM news t1, btc t2, eth t3, ltc t4 WHERE t1.date = t2.date AND t2.date = t3.date AND t3.date = t4.date;
+
+# To create all crypto prices data
+create table news_all_prices as  SELECT t1.date as Date,t1.score as Score,t2.price as BTC_PRICE,t3.price as ETH_PRICE,t4.price as LTC_PRICE FROM news t1, btc t2, eth t3, ltc t4 WHERE t1.date = t2.date AND t2.date = t3.date AND t3.date = t4.date;
+
+# exporting the above result to an excel file
+INSERT OVERWRITE LOCAL DIRECTORY '/home/jda448/bigdataproject' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' SELECT t1.date as Date,t1.score as Score,t2.price as BTC_PRICE,t3.price as ETH_PRICE,t4.price as LTC_PRICE FROM news t1, btc t2, eth t3, ltc t4 WHERE t1.date = t2.date AND t2.date = t3.date AND t3.date = t4.date;
+
+
